@@ -93,27 +93,35 @@ export const BlurHashImg = component$<{
     .wrapper canvas { width: 100%; position: absolute; top: 0; left: 0; }
     .wrapper .load { filter: blur(16px); }
   `);
+  const imgRef = useSignal<HTMLImageElement>();
   const loadState = useSignal(isServer ? 0 : 1);
 
   useClientEffect$(() => {
-    if (loadState.value === 0) loadState.value = 1;
+    if (imgRef.value?.complete) loadState.value = 2;
+    else if (loadState.value === 0) loadState.value = 1;
   });
   let avg;
   if (isServer) {
     avg = calcAverageRGB(props.hash);
   }
+  console.log(loadState.value);
+  const img =
+    props.eager ||
+    (loadState.value > 0 && (
+      <img
+        ref={imgRef}
+        src={props.src}
+        class={loadState.value === 1 && 'load'}
+        onLoad$={() => (loadState.value = 2)}
+        onError$={() => (loadState.value = 1)}
+      />
+    ));
 
   return (
     <div class="wrapper" style={{ '--ratio': props.ratio, '--avg': avg }}>
-      {props.eager ||
-        (loadState.value > 0 && (
-          <img
-            src={props.src}
-            class={loadState.value != 2 && 'load'}
-            onLoad$={() => (loadState.value = 2)}
-          />
-        ))}
+      {!props.eager && img}
       {loadState.value < 2 && <BlurHash {...props} />}
+      {props.eager && img}
       {isServer && !props.eager && (
         // Must write html ourselves or Qwik crashes https://github.com/BuilderIO/qwik/issues/2024
         <noscript dangerouslySetInnerHTML={`<img src="${props.src}" />`} />

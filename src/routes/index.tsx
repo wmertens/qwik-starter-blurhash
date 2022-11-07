@@ -18,6 +18,7 @@ export default component$(() => {
         />
       </p>
       <BlurHashImg
+        // eager
         hash="LEHV6nWB2yk8pyo0adR*.7kCMdnj"
         src="https://blurha.sh/12c2aca29ea896a628be.jpg"
       />
