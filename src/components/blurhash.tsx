@@ -23,6 +23,7 @@ export const BlurHash = component$<{
   width?: number;
   height?: number;
   ratio?: string;
+  eager?: boolean;
   className?: string;
 }>((props) => {
   // The width and height are pre-stretching by style
@@ -31,10 +32,13 @@ export const BlurHash = component$<{
   const ref = useSignal<HTMLCanvasElement>();
 
   // // Render the blurhash when the element is visible on client
-  useClientEffect$(({ track }) => {
-    const hash = track(() => props.hash);
-    renderHash(ref.value, hash, width, height);
-  });
+  useClientEffect$(
+    ({ track }) => {
+      const hash = track(() => props.hash);
+      renderHash(ref.value, hash, width, height);
+    },
+    { eagerness: props.eager ? 'load' : 'visible' }
+  );
 
   return (
     <canvas
@@ -80,13 +84,14 @@ export const BlurHashImg = component$<{
   height?: number;
   ratio?: string;
   src?: string;
+  eager?: boolean;
 }>((props) => {
   useStyles$(`
     .wrapper { width: 100%; position: relative; overflow: hidden; 
     aspect-ratio: var(--ratio, 3/2); background-color: var(--avg); }
-    .wrapper img { width: 100%; filter: blur(16px); transition: filter .05s; }
+    .wrapper img { width: 100%; filter: blur(0); transition: filter .05s; }
     .wrapper canvas { width: 100%; position: absolute; top: 0; left: 0; }
-    .wrapper .img { filter: blur(0); }
+    .wrapper .load { filter: blur(16px); }
   `);
   const loadState = useSignal(isServer ? 0 : 1);
 
@@ -100,15 +105,16 @@ export const BlurHashImg = component$<{
 
   return (
     <div class="wrapper" style={{ '--ratio': props.ratio, '--avg': avg }}>
-      {loadState.value > 0 && (
-        <img
-          src={props.src}
-          class={loadState.value === 2 && 'img'}
-          onLoad$={() => (loadState.value = 2)}
-        />
-      )}
+      {props.eager ||
+        (loadState.value > 0 && (
+          <img
+            src={props.src}
+            class={loadState.value != 2 && 'load'}
+            onLoad$={() => (loadState.value = 2)}
+          />
+        ))}
       {loadState.value < 2 && <BlurHash {...props} />}
-      {isServer && props.src && (
+      {isServer && !props.eager && (
         // Must write html ourselves or Qwik crashes https://github.com/BuilderIO/qwik/issues/2024
         <noscript dangerouslySetInnerHTML={`<img src="${props.src}" />`} />
       )}
