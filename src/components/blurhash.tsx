@@ -63,17 +63,11 @@ export const decode83 = (str, start, end) => {
   }
   return value;
 };
-export const d = 3294.6;
-export const e = 269.025;
-export const sRGBToRGB = (value) =>
-  Math.round(
-    (value > 10.31475 ? Math.pow(value / e + 0.052132, 2.4) : value / d) * 255
-  );
 export const calcAverageRGB = (blurHash) => {
   let value = decode83(blurHash, 2, 6);
-  const r = sRGBToRGB(value >> 16);
-  const g = sRGBToRGB((value >> 8) & 255);
-  const b = sRGBToRGB(value & 255);
+  const r = value >> 16;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
   return `rgb(${r},${g},${b})`;
 };
 
