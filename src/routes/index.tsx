@@ -7,7 +7,7 @@ export default component$(() => {
   return (
     <div>
       <h1>blurhash</h1>
-      {/* <BlurHash hash={myHash.value} /> */}
+      <BlurHash hash={myHash.value} />
       <p>
         Paste your own hash here:{' '}
         <input
@@ -17,6 +17,13 @@ export default component$(() => {
           }
         />
       </p>
+      Lazy:
+      <BlurHashImg
+        // eager
+        hash="LEHV6nWB2yk8pyo0adR*.7kCMdnj"
+        src="https://blurha.sh/12c2aca29ea896a628be.jpg"
+      />
+      Eager:
       <BlurHashImg
         eager
         hash="LEHV6nWB2yk8pyo0adR*.7kCMdnj"
