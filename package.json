@@ -30,10 +30,13 @@
     "@types/node": "latest",
     "@typescript-eslint/eslint-plugin": "5.37.0",
     "@typescript-eslint/parser": "5.37.0",
+    "@vanilla-extract/css": "^1.9.1",
+    "@vanilla-extract/vite-plugin": "^3.6.1",
     "eslint": "8.23.1",
     "eslint-plugin-qwik": "0.12.1",
     "node-fetch": "3.2.10",
     "prettier": "2.7.1",
+    "qwik-styled-ve": "^0.1.0",
     "typescript": "4.8.3",
     "vite": "3.2.1",
     "vite-tsconfig-paths": "3.5.0"

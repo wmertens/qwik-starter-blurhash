@@ -1,13 +1,9 @@
-import {
-  component$,
-  useClientEffect$,
-  useSignal,
-  useStyles$,
-} from '@builder.io/qwik';
+import { component$, useClientEffect$, useSignal, $ } from '@builder.io/qwik';
 import { isServer } from '@builder.io/qwik/build';
 // fast-blurhash is slightly less precise, but much faster and a little smaller
 // import { decode } from 'blurhash';
 import { decodeBlurHash as decode } from 'fast-blurhash';
+import { Wrapper, loading } from './blurhash.css';
 
 export const renderHash = (canvas, hash, width, height) => {
   if (!canvas) return;
@@ -80,46 +76,62 @@ export const BlurHashImg = component$<{
   src?: string;
   eager?: boolean;
 }>((props) => {
-  useStyles$(`
-    .wrapper { width: 100%; position: relative; overflow: hidden; 
-    aspect-ratio: var(--ratio, 3/2); background-color: var(--avg); }
-    .wrapper img { width: 100%; filter: blur(0); transition: filter .05s; }
-    .wrapper canvas { width: 100%; position: absolute; top: 0; left: 0; }
-    .wrapper .load { filter: blur(16px); }
-  `);
+  const avg = calcAverageRGB(props.hash);
+  const ratio = useSignal(props.ratio);
   const imgRef = useSignal<HTMLImageElement>();
-  const loadState = useSignal(isServer ? 0 : 1);
+  // 0: wait, 1: eager ssr, 5: blur, 7: error, 8: unblur, 9: done
+  const state = useSignal(props.eager ? 1 : 0);
 
-  useClientEffect$(() => {
-    if (imgRef.value?.complete) loadState.value = 2;
-    else if (loadState.value === 0) loadState.value = 1;
+  const onLoad = $((img) => {
+    console.log('loaded', state.value);
+    if (img.height)
+      ratio.value =
+        img.width / img.height((state.value = state.value > 4 ? 8 : 8));
   });
-  let avg;
-  if (isServer) {
-    avg = calcAverageRGB(props.hash);
+  useClientEffect$(
+    () => {
+      if (!state.value) state.value = 1;
+      // give img a short time to load from cache
+      else
+        setTimeout(async () => {
+          if (state.value < 7) {
+            // load doesn't fire if already loaded
+            const img = imgRef.value;
+            if (img?.complete) {
+              if (img.width) await onLoad(img);
+              else state.value = 7;
+            } else state.value = 5;
+          }
+        }, 10);
+    },
+    { eagerness: props.eager ? 'load' : 'visible' }
+  );
+
+  if (state.value === 8) {
+    // remove blur when no longer needed
+    setTimeout(() => (state.value = 9), 2000);
   }
-  console.log(loadState.value);
-  const img =
-    props.eager ||
-    (loadState.value > 0 && (
-      <img
-        ref={imgRef}
-        src={props.src}
-        class={loadState.value === 1 && 'load'}
-        onLoad$={() => (loadState.value = 2)}
-        onError$={() => (loadState.value = 1)}
-      />
-    ));
 
   return (
-    <div class="wrapper" style={{ '--ratio': props.ratio, '--avg': avg }}>
-      {!props.eager && img}
-      {loadState.value < 2 && <BlurHash {...props} />}
-      {props.eager && img}
-      {isServer && !props.eager && (
-        // Must write html ourselves or Qwik crashes https://github.com/BuilderIO/qwik/issues/2024
-        <noscript dangerouslySetInnerHTML={`<img src="${props.src}" />`} />
-      )}
-    </div>
+    <>
+      {state.value}
+      <Wrapper style={{ '--ratio': ratio.value, '--avg': avg }}>
+        {state.value > 4 && state.value < 9 && <BlurHash {...props} />}
+        {state.value > 0 && (
+          <img
+            key={1}
+            ref={imgRef}
+            src={props.src}
+            class={!isServer && state.value < 9 && loading}
+            onLoad$={onLoad}
+            onError$={() => (state.value = 7)}
+          />
+        )}
+        {isServer && !props.eager && (
+          // Must write html ourselves or Qwik crashes https://github.com/BuilderIO/qwik/issues/2024
+          <noscript dangerouslySetInnerHTML={`<img src="${props.src}" />`} />
+        )}
+      </Wrapper>
+    </>
   );
 });
